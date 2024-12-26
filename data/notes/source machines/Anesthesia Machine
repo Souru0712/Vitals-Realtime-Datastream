@@ -1,0 +1,18 @@
+works by receiving medical gases, controlling their flow,
+and mixing them to create a gas mixture for the patient during surgery
+
+Breathing: Anesthesia machines have alarms that detect low
+pressure in the breathing circuit, low exhaled tidal volume, and
+low exhaled carbon dioxide.
+
+Vital signs: Anesthesia machines can monitor a patient's heart rate,
+ECG, blood pressure, and temperature.
+
+End-tidal carbon dioxide: Some anesthesia machines can
+monitor end-tidal carbon dioxide.
+
+End-tidal anesthetic concentrations: Some anesthesia machines can
+monitor end-tidal anesthetic concentrations.
+
+Minimal alveolar concentration: Some anesthesia machines can
+estimate minimal alveolar concentration.

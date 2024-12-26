@@ -1,0 +1,175 @@
+#x-airflow-common:
+#  &airflow-common
+#  build:
+#    context: .
+#    dockerfile: Dockerfile
+#  image: custom-airflow:2.7.1-python3.9
+#  env_file:
+#    - airflow.env
+#  volumes:
+#    - ./config:/opt/airflow/config
+#    - ./dags:/opt/airflow/dags
+#    - ./data:/opt/airflow/data
+#    - ./etls:/opt/airflow/etls
+#    - ./logs:/opt/airflow/logs
+#    - ./pipelines:/opt/airflow/pipelines
+#    - ./plugins:/opt/airflow/plugins
+#    - ./tests:/opt/airflow/tests
+#    - ./utils:/opt/airflow/utils
+#    # - ./airflow.cfg:/opt/airflow/airflow.cfg
+#    - ./requirements.txt:/opt/airflow/requirements.txt
+#  depends_on:
+#    - postgres
+#    - redis
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - confluent
+
+  broker:
+    image: confluentinc/cp-kafka:7.5.0
+    hostname: broker
+    container_name: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: PLAINTEXT://broker:29092, PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+    networks:
+      - confluent
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker:29092
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - confluent
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.5.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      - broker
+      - schema-registry
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: broker:29092
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONTROL_CENTER_CONNECT_CLUSTER: http://connect:8083
+      CONTROL_CENTER_KSQL_URL: http://ksqldb-server:8088
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_REPLICATION: 1
+      PORT: 9021
+    networks:
+      - confluent
+
+  spark-master:
+    image: bitnami/spark:3.5.1
+    container_name: spark_master
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./pipelines:/opt/bitnami/spark/pipelines # Mount the local directory to the container
+      - ./utils:/opt/bitnami/spark/utils
+      - ./etls:/opt/bitnami/spark/etls
+      - ./config:/opt/bitnami/spark/config
+    networks:
+      - confluent
+
+  spark-worker:
+    image: bitnami/spark:3.5.1
+    container_name: spark_worker
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+    depends_on:
+      - spark-master
+    volumes:
+      - ./pipelines:/opt/bitnami/spark/pipelines # Mount the local directory to the container
+      - ./utils:/opt/bitnami/spark/utils
+      - ./etls:/opt/bitnami/spark/etls
+      - ./config:/opt/bitnami/spark/config
+    networks:
+      - confluent
+  
+#  postgres:
+#    image: postgres:12
+#    environment:
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: postgres
+#      POSTGRES_DB: airflow_medical
+#      POSTGRES_PORT: 5432
+#    ports:
+#      - "5432:5432"
+#
+#  redis:
+#    image: redis:latest
+#    ports:
+#      - "6379:6379"
+#
+#  airflow-init:
+#    <<: *airflow-common
+#    command: >
+#      bash -c "pip install -r /opt/airflow/requirements.txt && airflow db init && airflow db upgrade && airflow users create --username oscar --firstname oscar --lastname lam --role Admin --email oscarlam84@gmail.com --password admin"
+#    restart: "no"
+#
+#  airflow-webserver:
+#    <<: *airflow-common
+#    command: webserver
+#    ports:
+#      - "8080:8080"
+#
+#  airflow-scheduler:
+#    <<: *airflow-common
+#    command: scheduler
+#
+#  airflow-worker:
+#    <<: *airflow-common
+#    command: celery worker
+
+networks:
+  confluent:

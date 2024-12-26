@@ -1,0 +1,29 @@
+Bispectral Index (BIS)
+A number from 0 to 100 that indicates a patient's
+level of consciousness. A BIS of 0 means no brain activity, 100 means awake,
+and values less than 40 indicate a deep hypnotic state.
+
+BIS is used in anesthesia, critical care, and procedural sedation
+to assess a patient's response to sedatives.
+
+Multimodality monitoring (MMM)
+A tool that monitors changes in physiologic parameters to
+detect SBI in comatose patients. These parameters include:
+
+    Intracranial pressure (ICP)
+    Cerebral perfusion pressure (CPP)
+    Cerebral blood flow (CBF)
+    Brain tissue oxygenation
+    Cerebral metabolism
+    Electrocortical activity
+
+Near-infrared spectroscopy (NIRS)
+A tool that can measure many physiological parameters, including:
+    Hemoglobin
+    Oxygen saturations
+    H2O concentrations
+    Heart, respiration, and Mayer wave
+        frequencies, amplitudes, and pulsatility
+
+Event-related potential (ERP)
+A measured brain response to a specific sensory, cognitive, or motor event.
